@@ -39,6 +39,10 @@ resource "google_cloud_run_v2_service" "this" {
 
   template {
     service_account = google_service_account.run_sa.email
+    vpc_access {
+      connector = "projects/${var.gcp_project_id}/locations/${var.gcp_region}/connectors/creative-studio-connector"
+      egress    = "PRIVATE_RANGES_ONLY"
+    }
     volumes {
       name = "cloudsql"
       cloud_sql_instance {
