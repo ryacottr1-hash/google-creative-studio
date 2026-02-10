@@ -14,6 +14,7 @@
  limitations under the License.
 -->
 <div class="top-left-container fixed z-[101]">
+  <!-- Show workspace switcher when user has workspaces -->
   <ng-container *ngIf="activeWorkspace">
     <div
       class="workspace-container bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px] z-[1000]"
@@ -97,5 +98,17 @@
         <span>Feedback</span>
       </button>
     </mat-menu>
+  </ng-container>
+
+  <!-- Show create workspace button when user has no workspaces -->
+  <ng-container *ngIf="!activeWorkspace && workspaces.length === 0">
+    <div
+      class="workspace-container bg-gradient-to-b from-zinc-500/50 to-neutral-700/20 rounded-[48px] shadow-[2px_2px_12px_0px_rgba(0,0,0,0.10)] outline outline-1 outline-offset-[-1px] outline-stone-300/80 backdrop-blur-[10px] z-[1000] cursor-pointer"
+      (click)="openCreateWorkspaceDialog()"
+      matTooltip="Create your first workspace to get started!"
+    >
+      <mat-icon>add</mat-icon>
+      <span class="workspace-name">Create Workspace</span>
+    </div>
   </ng-container>
 </div>

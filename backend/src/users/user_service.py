@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 from typing import Optional
+
+from fastapi import Depends
 
 from src.common.dto.pagination_response_dto import PaginationResponseDto
 from src.users.dto.user_create_dto import UserCreateDto, UserUpdateRoleDto
@@ -20,9 +23,8 @@ from src.users.dto.user_search_dto import UserSearchDto
 from src.users.repository.user_repository import UserRepository
 from src.users.user_model import UserModel, UserRoleEnum
 
+logger = logging.getLogger(__name__)
 
-
-from fastapi import Depends
 
 class UserService:
     """
@@ -37,7 +39,7 @@ class UserService:
     ) -> UserModel:
         """
         Retrieves a user by their email. If the user exists, it returns it.
-        If the user doesn't exist, it creates a new user document.
+        If the user doesn't exist, it creates a new user document and a default workspace.
         """
 
         # 1. Check if the user already exists in the database.
@@ -53,7 +55,7 @@ class UserService:
             name=name,
             picture=picture or "",
         )
-        
+
         # We need to ensure roles are set, but UserCreateDto doesn't have roles.
         # The repository create method takes a Pydantic model or dict.
         # If we pass UserCreateDto, we miss 'roles'.
@@ -62,7 +64,35 @@ class UserService:
         user_data["roles"] = [UserRoleEnum.USER]
 
         # 3. Call the repository's create() method
-        return await self.user_repo.create(user_data)
+        new_user = await self.user_repo.create(user_data)
+
+        # 4. Create a default workspace for the new user
+        try:
+            from src.workspaces.repository.workspace_repository import WorkspaceRepository
+            from src.workspaces.schema.workspace_model import WorkspaceMember, WorkspaceModel, WorkspaceRoleEnum
+
+            workspace_repo = WorkspaceRepository()
+
+            # Create the user as the owner/first member of the workspace
+            owner_as_member = WorkspaceMember(
+                user_id=new_user.id,
+                email=new_user.email,
+                role=WorkspaceRoleEnum.OWNER
+            )
+
+            # Create the default workspace
+            default_workspace = WorkspaceModel(
+                name=f"{name}'s Workspace",
+                owner_id=new_user.id,
+            )
+
+            await workspace_repo.create(default_workspace, initial_members=[owner_as_member])
+            logger.info(f"Created default workspace for new user: {email}")
+        except Exception as e:
+            # Log the error but don't fail user creation if workspace creation fails
+            logger.error(f"Failed to create default workspace for user {email}: {e}")
+
+        return new_user
 
     async def get_user_by_id(self, user_id: int) -> Optional[UserModel]:
         """Finds a single user by their ID."""
