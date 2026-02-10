@@ -24,15 +24,27 @@ resource "google_sql_database_instance" "default" {
 
   settings {
     tier = "db-perf-optimized-N-2"
-    
+
     # Enable IAM Authentication for better security (optional but recommended)
     database_flags {
       name  = "cloudsql.iam_authentication"
       value = "on"
     }
 
+    # Password policy to comply with org policies
+    password_validation_policy {
+      min_length                  = 12
+      complexity                  = "COMPLEXITY_DEFAULT"
+      reuse_interval              = 10
+      disallow_username_substring = true
+      enable_password_policy      = true
+    }
+
     ip_configuration {
-      ipv4_enabled = true # Easy connectivity from Cloud Run without VPC peering complexity
+      ipv4_enabled                                  = false # Disabled per org policy constraints/sql.restrictPublicIp
+      private_network                               = "projects/${var.project_id}/global/networks/default"
+      enable_private_path_for_google_cloud_services = true # Enable Private Service Connect for Google Cloud services
+      ssl_mode                                      = "ENCRYPTED_ONLY" # Required by org policy - only allow SSL/TLS connections
     }
   }
   
